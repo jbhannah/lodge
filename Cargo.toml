@@ -10,3 +10,4 @@ description = "Automatable symbolic link manager"
 [dependencies]
 clap = "2.33.0"
 dirs = "2.0.2"
+ignore = "0.4.11"
