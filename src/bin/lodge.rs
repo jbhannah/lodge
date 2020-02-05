@@ -37,12 +37,19 @@ fn main() -> Result<(), ignore::Error> {
         )
         .get_matches();
 
-    let sources: Vec<PathBuf> = matches
-        .values_of(ARG_SOURCES)
-        .unwrap()
-        .map(PathBuf::from)
-        .collect();
-    let base = Base::new(matches.value_of(ARG_BASE).unwrap()).expect("cannot use base path");
+    let sources: Vec<PathBuf> = match matches.values_of(ARG_SOURCES) {
+        Some(sources) => sources.collect::<Vec<&str>>(),
+        None => vec!["."],
+    }
+    .iter()
+    .map(PathBuf::from)
+    .collect();
+
+    let base = Base::new(match matches.value_of(ARG_BASE) {
+        Some(base) => base,
+        None => home_path,
+    })
+    .expect("cannot use base path");
 
     let mut overrides: Vec<OverrideBuilder> = Vec::new();
 
@@ -111,12 +118,12 @@ fn main() -> Result<(), ignore::Error> {
                     }
                 }
 
-                println!("Linking {}", dst.display());
+                println!("Linking {} -> {}", dst.display(), src.display());
                 count += 1;
                 symlink(src, dst).expect("could not create link");
             }
 
-            println!("Final count: {}", count);
+            println!("Linked: {}", count);
             println!("Skipped: {}", skip);
             println!("Total: {}", count + skip);
         });
@@ -126,7 +133,7 @@ fn main() -> Result<(), ignore::Error> {
             Box::new(move |entry| match entry {
                 Ok(entry) => match Source::try_from(entry) {
                     Ok(src) => {
-                        tx.send(src).unwrap();
+                        tx.send(src).expect("could not process source file");
                         WalkState::Continue
                     }
                     Err(_err) => WalkState::Continue,
@@ -136,7 +143,7 @@ fn main() -> Result<(), ignore::Error> {
         });
 
         drop(tx);
-        rx_thread.join().unwrap();
+        rx_thread.join().expect("could not join linking thread");
     }
 
     Ok(())
