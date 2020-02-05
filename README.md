@@ -12,7 +12,7 @@ Automatable symbolic link manager, à la [GNU Stow][] and [rcm][].
 
 ## Copyright
 
-Copyright © 2019 Jesse B. Hannah. Licensed under the terms of the MIT License
+Copyright © 2020 Jesse B. Hannah. Licensed under the terms of the MIT License
 (see [LICENSE](LICENSE)).
 
 [gnu stow]: https://www.gnu.org/software/stow/
