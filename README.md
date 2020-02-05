@@ -1,6 +1,6 @@
 # Lodge
 
-![[Cargo](https://github.com/jbhannah/lodge/workflows/Cargo/badge.svg)][actions-cargo]
+[![Cargo](https://github.com/jbhannah/lodge/workflows/Cargo/badge.svg)][actions-cargo]
 
 Automatable symbolic link manager, à la [GNU Stow][] and [rcm][].
 
@@ -17,6 +17,6 @@ Automatable symbolic link manager, à la [GNU Stow][] and [rcm][].
 Copyright © 2020 Jesse B. Hannah. Licensed under the terms of the MIT License
 (see [LICENSE](LICENSE)).
 
-[actions-cargo]: https://github.com/jbhannah/lodge/actions
+[actions-cargo]: https://github.com/jbhannah/lodge/actions?query=workflow%3ACargo
 [gnu stow]: https://www.gnu.org/software/stow/
 [rcm]: https://github.com/thoughtbot/rcm
