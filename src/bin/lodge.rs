@@ -1,7 +1,11 @@
 use clap::{App, Arg};
+use crossbeam_channel::bounded;
 use dirs::home_dir;
-use ignore::{overrides::OverrideBuilder, WalkBuilder, WalkState};
+use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder, WalkState};
+use std::fs::{remove_file, DirBuilder};
+use std::os::unix::fs::symlink;
 use std::path::PathBuf;
+use std::thread;
 
 const OVERRIDES: [&str; 2] = ["!.git", "!.hg"];
 
@@ -33,7 +37,7 @@ fn main() -> Result<(), ignore::Error> {
         .unwrap()
         .map(PathBuf::from)
         .collect();
-    let _target = PathBuf::from(matches.value_of("target").unwrap());
+    let target = PathBuf::from(matches.value_of("target").unwrap());
 
     let mut overrides: Vec<OverrideBuilder> = Vec::new();
 
@@ -59,24 +63,89 @@ fn main() -> Result<(), ignore::Error> {
             builder.add(path);
         }
 
-        builder.build_parallel().run(|| {
-            Box::new(|p| {
-                if let Ok(path) = p {
-                    let components = path
-                        .path()
-                        .components()
-                        .rev()
-                        .take(path.depth())
-                        .collect::<Vec<_>>();
+        let (tx, rx) = bounded::<DirEntry>(10);
 
-                    if !components.is_empty() {
-                        println!("{:?}", components.iter().rev().collect::<Vec<_>>());
+        let rx_thread = thread::spawn(move || {
+            let mut count = 0;
+
+            for src in rx {
+                count += 1;
+
+                let mut dst = target.clone();
+                let components = src
+                    .path()
+                    .components()
+                    .rev()
+                    .take(src.depth())
+                    .collect::<Vec<_>>();
+
+                if components.is_empty() {
+                    continue;
+                }
+
+                for component in components.iter().rev() {
+                    dst.push(component);
+                }
+                println!("{}", dst.display());
+
+                if let Some(parent) = dst.parent() {
+                    DirBuilder::new()
+                        .recursive(true)
+                        .create(parent)
+                        .expect("could not create parent directory");
+                }
+
+                let src_meta = src
+                    .metadata()
+                    .expect("could not read metadata for source file");
+
+                if let Ok(dst_meta) = dst.symlink_metadata() {
+                    if dst.exists() {
+                        if dst_meta.file_type().is_file()
+                            && dst_meta.file_type() == src_meta.file_type()
+                            && dst_meta.len() == src_meta.len()
+                        {
+                            remove_file(dst.as_path())
+                                .expect("could not remove identical target file");
+                        } else {
+                            println!("Skipping {}", dst.as_path().display());
+                            continue;
+                        }
+                    }
+
+                    if dst_meta.file_type().is_symlink() {
+                        remove_file(dst.as_path()).expect("could not remove symlink at target");
+                    }
+                }
+
+                symlink(
+                    src.path()
+                        .canonicalize()
+                        .expect("could not determine canonical source path"),
+                    dst,
+                )
+                .expect("could not create link");
+            }
+
+            println!("Final count: {}", count);
+        });
+
+        builder.build_parallel().run(|| {
+            let tx = tx.clone();
+            Box::new(move |entry| {
+                if let Ok(entry) = entry {
+                    if entry.path().is_file() {
+                        tx.send(entry).unwrap();
                     }
                 }
 
                 WalkState::Continue
             })
-        })
+        });
+
+        drop(tx);
+        rx_thread.join().unwrap();
     }
+
     Ok(())
 }

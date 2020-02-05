@@ -222,6 +222,7 @@ name = "lodge"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "crossbeam-channel",
  "dirs",
  "ignore",
 ]
