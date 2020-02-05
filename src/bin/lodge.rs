@@ -1,8 +1,9 @@
 use clap::{App, Arg};
 use crossbeam_channel::bounded;
 use dirs::home_dir;
-use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder, WalkState};
-use lodge::base::Base;
+use ignore::{overrides::OverrideBuilder, WalkBuilder, WalkState};
+use lodge::{base::Base, source::Source};
+use std::convert::TryFrom;
 use std::fs::{remove_file, DirBuilder};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
@@ -67,30 +68,16 @@ fn main() -> Result<(), ignore::Error> {
             builder.add(path);
         }
 
-        let (tx, rx) = bounded::<DirEntry>(10);
+        let (tx, rx) = bounded::<Source>(10);
 
         let rx_thread = thread::spawn(move || {
             let mut count = 0;
+            let mut skip = 0;
 
             for src in rx {
-                count += 1;
-
                 let mut dst = base.clone();
-                let components = src
-                    .path()
-                    .components()
-                    .rev()
-                    .take(src.depth())
-                    .collect::<Vec<_>>();
 
-                if components.is_empty() {
-                    continue;
-                }
-
-                for component in components.iter().rev() {
-                    dst.push(component);
-                }
-                println!("{}", dst.display());
+                dst.extend(src.components());
 
                 if let Some(parent) = dst.parent() {
                     DirBuilder::new()
@@ -113,6 +100,7 @@ fn main() -> Result<(), ignore::Error> {
                                 .expect("could not remove identical file at destination path");
                         } else {
                             println!("Skipping {}", dst.as_path().display());
+                            skip += 1;
                             continue;
                         }
                     }
@@ -123,28 +111,27 @@ fn main() -> Result<(), ignore::Error> {
                     }
                 }
 
-                symlink(
-                    src.path()
-                        .canonicalize()
-                        .expect("could not determine canonical source path"),
-                    dst,
-                )
-                .expect("could not create link");
+                println!("Linking {}", dst.display());
+                count += 1;
+                symlink(src, dst).expect("could not create link");
             }
 
             println!("Final count: {}", count);
+            println!("Skipped: {}", skip);
+            println!("Total: {}", count + skip);
         });
 
         builder.build_parallel().run(|| {
             let tx = tx.clone();
-            Box::new(move |entry| {
-                if let Ok(entry) = entry {
-                    if entry.path().is_file() {
-                        tx.send(entry).unwrap();
+            Box::new(move |entry| match entry {
+                Ok(entry) => match Source::try_from(entry) {
+                    Ok(src) => {
+                        tx.send(src).unwrap();
+                        WalkState::Continue
                     }
-                }
-
-                WalkState::Continue
+                    Err(_err) => WalkState::Continue,
+                },
+                Err(_err) => WalkState::Continue,
             })
         });
 
