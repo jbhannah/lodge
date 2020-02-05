@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## Unreleased
 
+- `-t/--target <target>` renamed to `-b/--base <BASE>`
+- Refactoring for maintainability
+
 ## v0.1.0 – 2020-02-04
 
 ### Added
