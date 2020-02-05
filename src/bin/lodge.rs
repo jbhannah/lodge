@@ -8,6 +8,9 @@ use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::thread;
 
+const ARG_BASE: &str = "BASE";
+const ARG_SOURCES: &str = "SOURCES";
+
 const OVERRIDES: [&str; 2] = ["!.git", "!.hg"];
 
 fn main() -> Result<(), ignore::Error> {
@@ -19,13 +22,13 @@ fn main() -> Result<(), ignore::Error> {
         .version(env!("CARGO_PKG_VERSION"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
-            Arg::with_name("SOURCES")
-                .help("List of source directories to link into <base>")
+            Arg::with_name(ARG_SOURCES)
+                .help("List of source directories to link into <BASE>")
                 .multiple(true)
                 .default_value("."),
         )
         .arg(
-            Arg::with_name("base")
+            Arg::with_name(ARG_BASE)
                 .long("base")
                 .short("b")
                 .help("Base directory for recreating structure and linking contents of SOURCES")
@@ -34,11 +37,11 @@ fn main() -> Result<(), ignore::Error> {
         .get_matches();
 
     let sources: Vec<PathBuf> = matches
-        .values_of("SOURCES")
+        .values_of(ARG_SOURCES)
         .unwrap()
         .map(PathBuf::from)
         .collect();
-    let base = Base::new(matches.value_of("base").unwrap()).expect("cannot use base path");
+    let base = Base::new(matches.value_of(ARG_BASE).unwrap()).expect("cannot use base path");
 
     let mut overrides: Vec<OverrideBuilder> = Vec::new();
 
