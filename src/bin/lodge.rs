@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use crossbeam_channel::bounded;
 use dirs::home_dir;
 use ignore::{overrides::OverrideBuilder, DirEntry, WalkBuilder, WalkState};
+use lodge::base::Base;
 use std::fs::{remove_file, DirBuilder};
 use std::os::unix::fs::symlink;
 use std::path::PathBuf;
@@ -19,15 +20,15 @@ fn main() -> Result<(), ignore::Error> {
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
             Arg::with_name("SOURCES")
-                .help("List of source directories to link into <target>")
+                .help("List of source directories to link into <base>")
                 .multiple(true)
                 .default_value("."),
         )
         .arg(
-            Arg::with_name("target")
-                .long("target")
-                .short("t")
-                .help("Target directory for recreating structure and linking contents of SOURCES")
+            Arg::with_name("base")
+                .long("base")
+                .short("b")
+                .help("Base directory for recreating structure and linking contents of SOURCES")
                 .default_value(home_path),
         )
         .get_matches();
@@ -37,7 +38,7 @@ fn main() -> Result<(), ignore::Error> {
         .unwrap()
         .map(PathBuf::from)
         .collect();
-    let target = PathBuf::from(matches.value_of("target").unwrap());
+    let base = Base::new(matches.value_of("base").unwrap()).expect("cannot use base path");
 
     let mut overrides: Vec<OverrideBuilder> = Vec::new();
 
@@ -71,7 +72,7 @@ fn main() -> Result<(), ignore::Error> {
             for src in rx {
                 count += 1;
 
-                let mut dst = target.clone();
+                let mut dst = base.clone();
                 let components = src
                     .path()
                     .components()
@@ -106,7 +107,7 @@ fn main() -> Result<(), ignore::Error> {
                             && dst_meta.len() == src_meta.len()
                         {
                             remove_file(dst.as_path())
-                                .expect("could not remove identical target file");
+                                .expect("could not remove identical file at destination path");
                         } else {
                             println!("Skipping {}", dst.as_path().display());
                             continue;
@@ -114,7 +115,8 @@ fn main() -> Result<(), ignore::Error> {
                     }
 
                     if dst_meta.file_type().is_symlink() {
-                        remove_file(dst.as_path()).expect("could not remove symlink at target");
+                        remove_file(dst.as_path())
+                            .expect("could not remove symlink at destination path");
                     }
                 }
 
