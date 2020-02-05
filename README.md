@@ -6,7 +6,7 @@ Automatable symbolic link manager, à la [GNU Stow][] and [rcm][].
 
 ## Installation
 
-    cargo install --git https://github.com/jbhannah/lodge.git
+    cargo install lodge
 
 ## Usage
 
