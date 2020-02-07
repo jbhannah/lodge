@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog][], and this project adheres to
 
 ## v0.2.0 - 2020-02-07
 
+### Changed
+
 - `-t/--target <target>` renamed to `-b/--base <BASE>`
 - Refactoring for maintainability
 
