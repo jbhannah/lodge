@@ -10,7 +10,7 @@ Automatable symbolic link manager, à la [GNU Stow][] and [rcm][].
 
 ## Usage
 
-    lodge --help
+    lodge help
 
 ## Copyright
 
