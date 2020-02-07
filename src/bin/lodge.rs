@@ -2,12 +2,12 @@ use clap::{App, Arg};
 use crossbeam_channel::bounded;
 use dirs::home_dir;
 use ignore::{overrides::OverrideBuilder, WalkBuilder, WalkState};
-use lodge::{base::Base, link, source::Source};
+use lodge::{link, source::Source, target::Target};
 use std::convert::TryFrom;
 use std::path::PathBuf;
 use std::thread;
 
-const ARG_BASE: &str = "BASE";
+const ARG_TARGET: &str = "TARGET";
 const ARG_SOURCES: &str = "SOURCES";
 
 const OVERRIDES: [&str; 2] = ["!.git", "!.hg"];
@@ -22,15 +22,15 @@ fn main() -> Result<(), ignore::Error> {
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
             Arg::with_name(ARG_SOURCES)
-                .help("List of source directories to link into <BASE>")
+                .help("List of source directories to link into <TARGET>")
                 .multiple(true)
                 .default_value("."),
         )
         .arg(
-            Arg::with_name(ARG_BASE)
-                .long("base")
-                .short("b")
-                .help("Base directory for recreating structure and linking contents of SOURCES")
+            Arg::with_name(ARG_TARGET)
+                .long("target")
+                .short("t")
+                .help("Target directory for recreating structure and linking contents of SOURCES")
                 .default_value(home_path),
         )
         .get_matches();
@@ -43,11 +43,11 @@ fn main() -> Result<(), ignore::Error> {
     .map(PathBuf::from)
     .collect();
 
-    let base = Base::new(match matches.value_of(ARG_BASE) {
-        Some(base) => base,
+    let target = Target::new(match matches.value_of(ARG_TARGET) {
+        Some(target) => target,
         None => home_path,
     })
-    .expect("cannot use base path");
+    .expect("cannot use target path");
 
     let mut overrides: Vec<OverrideBuilder> = Vec::new();
 
@@ -80,7 +80,7 @@ fn main() -> Result<(), ignore::Error> {
             let mut skip = 0;
 
             for src in rx {
-                match base.build_link(&src) {
+                match target.build_link(&src) {
                     Ok(link) => {
                         match link.mklink() {
                             Ok(_) => {

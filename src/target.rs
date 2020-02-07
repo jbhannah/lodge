@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub enum Error {
-    Base(String),
+    Target(String),
     Io(io::Error),
 }
 
 impl From<&str> for Error {
     fn from(s: &str) -> Self {
-        Self::Base(s.to_owned())
+        Self::Target(s.to_owned())
     }
 }
 
@@ -22,15 +22,15 @@ impl From<io::Error> for Error {
 }
 
 #[derive(Clone, Debug)]
-pub struct Base(PathBuf);
+pub struct Target(PathBuf);
 
-impl AsRef<Path> for Base {
+impl AsRef<Path> for Target {
     fn as_ref(&self) -> &Path {
         &self.0
     }
 }
 
-impl Deref for Base {
+impl Deref for Target {
     type Target = PathBuf;
 
     fn deref(&self) -> &Self::Target {
@@ -38,21 +38,21 @@ impl Deref for Base {
     }
 }
 
-impl DerefMut for Base {
+impl DerefMut for Target {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl Base {
+impl Target {
     pub fn new<P: AsRef<Path>>(p: P) -> Result<Self, Error> {
         let p = p.as_ref().to_owned();
         let metadata = p.metadata()?;
 
         if !metadata.is_dir() {
-            Err(Error::from("base path is not a directory"))
+            Err(Error::from("target path is not a directory"))
         } else if metadata.permissions().readonly() {
-            Err(Error::from("base path is not writable"))
+            Err(Error::from("target path is not writable"))
         } else {
             Ok(Self(p))
         }
