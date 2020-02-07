@@ -2,10 +2,8 @@ use clap::{App, Arg};
 use crossbeam_channel::bounded;
 use dirs::home_dir;
 use ignore::{overrides::OverrideBuilder, WalkBuilder, WalkState};
-use lodge::{base::Base, source::Source};
+use lodge::{base::Base, link, source::Source};
 use std::convert::TryFrom;
-use std::fs::{remove_file, DirBuilder};
-use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 use std::thread;
 
@@ -82,45 +80,25 @@ fn main() -> Result<(), ignore::Error> {
             let mut skip = 0;
 
             for src in rx {
-                let mut dst = base.clone();
-
-                dst.extend(src.components());
-
-                if let Some(parent) = dst.parent() {
-                    DirBuilder::new()
-                        .recursive(true)
-                        .create(parent)
-                        .expect("could not create parent directory");
-                }
-
-                let src_meta = src
-                    .metadata()
-                    .expect("could not read metadata for source file");
-
-                if let Ok(dst_meta) = dst.symlink_metadata() {
-                    if dst.exists() {
-                        if dst_meta.file_type().is_file()
-                            && dst_meta.file_type() == src_meta.file_type()
-                            && dst_meta.len() == src_meta.len()
-                        {
-                            remove_file(dst.as_path())
-                                .expect("could not remove identical file at destination path");
-                        } else {
-                            println!("Skipping {}", dst.as_path().display());
-                            skip += 1;
-                            continue;
-                        }
+                match base.build_link(&src) {
+                    Ok(link) => {
+                        match link.mklink() {
+                            Ok(_) => {
+                                count += 1;
+                            }
+                            Err(err) => {
+                                eprintln!("could not create link: {}", err);
+                            }
+                        };
                     }
-
-                    if dst_meta.file_type().is_symlink() {
-                        remove_file(dst.as_path())
-                            .expect("could not remove symlink at destination path");
+                    Err(link::Error::Skip(err)) => {
+                        eprintln!("skipped building link: {}", err);
+                        skip += 1;
+                    }
+                    Err(link::Error::Io(err)) => {
+                        eprintln!("could not build link: {}", err);
                     }
                 }
-
-                println!("Linking {} -> {}", dst.display(), src.display());
-                count += 1;
-                symlink(src, dst).expect("could not create link");
             }
 
             println!("Linked: {}", count);
@@ -136,9 +114,9 @@ fn main() -> Result<(), ignore::Error> {
                         tx.send(src).expect("could not process source file");
                         WalkState::Continue
                     }
-                    Err(_err) => WalkState::Continue,
+                    Err(_) => WalkState::Continue,
                 },
-                Err(_err) => WalkState::Continue,
+                Err(_) => WalkState::Continue,
             })
         });
 

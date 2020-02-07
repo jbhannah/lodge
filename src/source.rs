@@ -76,7 +76,7 @@ impl TryFrom<DirEntry> for Source {
 }
 
 impl Source {
-    pub fn components(&self) -> std::slice::Iter<'_, std::ffi::OsString> {
+    pub fn components_iter(&self) -> std::slice::Iter<'_, std::ffi::OsString> {
         self.components.iter()
     }
 }

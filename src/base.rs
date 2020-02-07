@@ -1,3 +1,4 @@
+use crate::{link, source::Source};
 use std::io;
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
@@ -55,5 +56,11 @@ impl Base {
         } else {
             Ok(Self(p))
         }
+    }
+
+    pub fn build_link(&self, src: &Source) -> Result<link::Link, link::Error> {
+        let mut dst = self.clone();
+        dst.extend(src.components_iter());
+        link::Link::new(src, dst)
     }
 }
