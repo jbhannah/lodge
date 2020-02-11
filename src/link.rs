@@ -62,7 +62,6 @@ impl Link {
                         }
                         _ => true,
                     }
-                // true
                 } else if dst.exists() {
                     if dst_meta.file_type().is_file()
                         && dst_meta.file_type() == src_meta.file_type()

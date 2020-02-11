@@ -18,7 +18,7 @@ fn main() -> Result<(), ignore::Error> {
     let home = home_dir().expect("could not determine home directory");
     let home_path = home.to_str().expect("could not get path of home directory");
 
-    let app = App::new(env!("CARGO_PKG_NAME"))
+    let matches = App::new(env!("CARGO_PKG_NAME"))
         .author(env!("CARGO_PKG_AUTHORS"))
         .version(env!("CARGO_PKG_VERSION"))
         .about(env!("CARGO_PKG_DESCRIPTION"))
@@ -39,8 +39,8 @@ fn main() -> Result<(), ignore::Error> {
                         .multiple(true)
                         .default_value("."),
                 ),
-        );
-    let matches = app.clone().get_matches();
+        )
+        .get_matches();
 
     if let (CMD_LINK, Some(matches)) = matches.subcommand() {
         let target = Target::new(
