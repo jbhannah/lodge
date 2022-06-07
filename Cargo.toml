@@ -13,6 +13,6 @@ documentation = "https://docs.rs/lodge"
 
 [dependencies]
 clap = "2.33.0"
-crossbeam-channel = "0.4.2"
+crossbeam-channel = "0.5.4"
 dirs = "2.0.2"
 ignore = "0.4.14"
